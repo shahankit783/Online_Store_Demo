@@ -62,5 +62,6 @@ public class Framework_002 {
   public void afterMethod() {
 	    Log.endTestCase(sTestCaseName);
 	    driver.close();
+	    driver.quit();
   		}
 }
