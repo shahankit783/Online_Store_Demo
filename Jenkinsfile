@@ -1,28 +1,61 @@
+def check_runs = new com.functions.buildGithubCheckScript()
 
-def buildGithubCheck(repository, commitID, privateKey, status, checkName) {
-    def currentTime = new Date().format("yyyy-MM-dd'T'HH:mm:ss'Z'")
-    def checkName_run_id
-  
-    jsonWebToken = getJsonWebToken(privateKey)
-    getStatusCode = validateAuth(jsonWebToken)
-    if (!(getStatusCode in [200,201])) {
-        error "Authentication request failed, status code: ${getStatusCode}"
-    }
-    token = getToken(jsonWebToken)
-  
-    try {
-        checkName_run_id = getPreviousCheckNameRunID(repository, commitID, token, checkName)
-    } catch(Exception e) {
-        echo "Exception: ${e}"
-        echo "Check name does not exist"
-    }
-
-    if (checkName_run_id) {
-        getStatusCode = setCheckName(repository, checkName, status, currentTime, "PATCH", commitID, checkName_run_id)
-    } else {
-        getStatusCode = setCheckName(repository, checkName, status, previousDay, "POST", commitID)
-    }
-    if (!(getStatusCode in [200,201])) {
-        error "Failed to create a check run, status code: ${getStatusCode}"
+pipeline {
+   
+    stages {
+        stage('Checkout') {
+            steps {
+                script {
+                    git (credentialsId: 'github-token',
+                    url: "https://github.com/<organization-name>/" + repoName,
+                    branch: "master")
+                }
+            }
+        }
+        stage("Build") {
+            steps {
+                script {
+                    withCredentials([sshUserPrivateKey(credentialsId: '<credentialsId>', keyFileVariable: 'privateKey', passphraseVariable: '', usernameVariable: '')]) {
+                        try {
+                            build_command = sh(script: "mvn clean install", returnStatus: true)
+                            check_runs.buildGithubCheck(<REPO_NAME>, <COMMIT_ID>, privateKey, 'success', "build")
+                        } catch(Exception e) {
+                            check_runs.buildGithubCheck(<REPO_NAME>, <COMMIT_ID>, privateKey, 'failure', "build")
+                            echo "Exception: ${e}"
+                        }
+                    }
+                }
+            }
+        }
+        stage("Unit Test") {
+            steps {
+                script {
+                    withCredentials([sshUserPrivateKey(credentialsId: '<credentialsId>', keyFileVariable: 'privateKey', passphraseVariable: '', usernameVariable: '')]) {
+                        try {
+                            def test = sh(script: "python unitTest.py", returnStdout: true)
+                            check_runs.buildGithubCheck(<REPO_NAME>, <COMMIT_ID>, privateKey, 'success', "unit-test")
+                        } catch(Exception e) {
+                            check_runs.buildGithubCheck(<REPO_NAME>, <COMMIT_ID>, privateKey, 'failure', "unit-test")
+                            echo "Exception: ${e}"
+                        }
+                    }
+                }
+            }
+        }
+        stage("Integration Test") {
+            steps {
+                script {
+                    withCredentials([sshUserPrivateKey(credentialsId: '<credentialsId>', keyFileVariable: 'privateKey', passphraseVariable: '', usernameVariable: '')]) {
+                        try {
+                            def test = sh(script: "python integrationTest.py", returnStdout: true)
+                            check_runs.buildGithubCheck(<REPO_NAME>, <COMMIT_ID>, privateKey, 'success', "integration-test")
+                        } catch(Exception e) {
+                            check_runs.buildGithubCheck(<REPO_NAME>, <COMMIT_ID>, privateKey, 'failure', "integration-test")
+                            echo "Exception: ${e}"
+                        }
+                    }
+                }
+            }
+        }
     }
 }
