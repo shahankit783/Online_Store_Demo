@@ -1,31 +1,31 @@
 pipeline {
   environment {
     //This variable need be tested as string
-    doError = ‘1’
+    doError = '1'
   }
   agent any
   stages {
-    stage(‘Error’) {
+    stage'Error') {
       when {
-        expression { doError == ‘1’ }
+        expression { doError == '1' }
       }
       steps {
-        echo “Failure”
-        error “failure test. It’s work”
+        echo "Failure"
+        error "failure test. It's work"
       }
     }
-    stage(‘Success’) {
+    stage('Success') {
       when {
-        expression { doError == ‘0’ }
+        expression { doError == '0' }
       }
       steps {
-        echo “ok”
+        echo "ok"
       }
     }
   }
   post {
     always {
-      echo ‘I will always execute’
+      echo 'I will always execute'
     }
   }
 }
