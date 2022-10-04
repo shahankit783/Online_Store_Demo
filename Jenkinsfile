@@ -5,7 +5,7 @@ pipeline {
   }
   agent any
   stages {
-    stage'Error') {
+    stage('Error') {
       when {
         expression { doError == '1' }
       }
